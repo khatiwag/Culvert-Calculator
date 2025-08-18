@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Culvert Grade Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
+        
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-cyan-400">Culvert Grade Calculator</h1>
+            <p class="text-gray-400 mt-2">Enter your culvert's details to calculate rod heights along its length.</p>
+        </div>
+
+        <!-- Input Form -->
+        <form id="gradeForm" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gray-700 p-4 rounded-lg">
+                <label for="start_rod_reading" class="block text-sm font-medium text-gray-300 mb-1">Initial Invert Rod Reading (m)</label>
+                <input type="number" id="start_rod_reading" name="start_rod_reading" step="0.001" required class="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="e.g., 1.370">
+            </div>
+            <div class="bg-gray-700 p-4 rounded-lg">
+                <label for="culvert_length" class="block text-sm font-medium text-gray-300 mb-1">Total Culvert Length (m)</label>
+                <input type="number" id="culvert_length" name="culvert_length" step="0.1" required class="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="e.g., 20">
+            </div>
+            <div class="bg-gray-700 p-4 rounded-lg">
+                <label for="total_fall" class="block text-sm font-medium text-gray-300 mb-1">Total Elevation Change (m)</label>
+                <input type="number" id="total_fall" name="total_fall" step="0.01" required class="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="e.g., 0.10">
+            </div>
+             <div class="bg-gray-700 p-4 rounded-lg">
+                <label for="grading_direction" class="block text-sm font-medium text-gray-300 mb-1">Grading Direction</label>
+                <select id="grading_direction" name="grading_direction" class="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
+                    <option value="downhill">Downhill (High to Low)</option>
+                    <option value="uphill">Uphill (Low to High)</option>
+                </select>
+            </div>
+            <div class="bg-gray-700 p-4 rounded-lg md:col-span-2">
+                <label for="intervals" class="block text-sm font-medium text-gray-300 mb-1">Calculation Interval (m)</label>
+                <input type="number" id="intervals" name="intervals" step="0.1" value="5" required class="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="e.g., 5.5">
+            </div>
+            <div class="md:col-span-2 flex justify-center mt-4">
+                 <button type="submit" class="w-full md:w-1/2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 shadow-lg">
+                    Calculate Grade
+                </button>
+            </div>
+        </form>
+
+        <!-- Results Section -->
+        <div id="results" class="hidden">
+            <h2 class="text-2xl font-bold text-center text-cyan-400 mb-4">Target Rod Heights</h2>
+            <div class="overflow-x-auto bg-gray-700 rounded-lg shadow-inner mb-8">
+                <table class="min-w-full text-center">
+                    <thead class="bg-gray-900">
+                        <tr>
+                            <th class="py-3 px-4 text-sm font-semibold text-gray-300 uppercase tracking-wider">Distance (Station)</th>
+                            <th class="py-3 px-4 text-sm font-semibold text-gray-300 uppercase tracking-wider">Invert Rod Reading</th>
+                            <th class="py-3 px-4 text-sm font-semibold text-gray-300 uppercase tracking-wider">Bed Rod Reading (+0.15m)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-table-body" class="divide-y divide-gray-600">
+                        <!-- Results will be injected here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Chart Container -->
+            <h2 class="text-2xl font-bold text-center text-cyan-400 mb-4">Grade Profile</h2>
+            <div class="bg-gray-700 rounded-lg p-4 h-96">
+                <canvas id="gradeChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Error Message Box -->
+        <div id="error-box" class="hidden mt-6 bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg relative" role="alert">
+            <strong class="font-bold">Error:</strong>
+            <span class="block sm:inline" id="error-message"></span>
+        </div>
+
+    </div>
+
+    <script>
+        // A variable to hold the chart instance, so we can destroy it before creating a new one
+        let gradeChart = null;
+
+        document.getElementById('gradeForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the form from submitting the traditional way
+
+            // Clear previous results and errors
+            const resultsDiv = document.getElementById('results');
+            const resultsBody = document.getElementById('results-table-body');
+            const errorBox = document.getElementById('error-box');
+            resultsBody.innerHTML = '';
+            resultsDiv.classList.add('hidden');
+            errorBox.classList.add('hidden');
+
+            // Get form values
+            const startRodReading = parseFloat(document.getElementById('start_rod_reading').value);
+            const culvertLength = parseFloat(document.getElementById('culvert_length').value);
+            const totalFall = parseFloat(document.getElementById('total_fall').value);
+            const interval = parseFloat(document.getElementById('intervals').value);
+            const direction = document.getElementById('grading_direction').value;
+
+            // --- Input Validation ---
+            if (isNaN(startRodReading) || isNaN(culvertLength) || isNaN(totalFall) || isNaN(interval)) {
+                showError("All fields must be filled with valid numbers.");
+                return;
+            }
+            if (culvertLength <= 0 || interval <= 0) {
+                showError("Culvert length and interval must be positive numbers.");
+                return;
+            }
+            if (interval > culvertLength) {
+                showError("Interval cannot be greater than the total culvert length.");
+                return;
+            }
+             if (totalFall < 0) {
+                showError("Total Elevation Change cannot be a negative number.");
+                return;
+            }
+
+            // --- Calculation ---
+            const slope = totalFall / culvertLength;
+            
+            let stations = [];
+            for (let dist = 0; dist <= culvertLength; dist += interval) {
+                stations.push(dist);
+            }
+            if (stations[stations.length - 1] < culvertLength) {
+                stations.push(culvertLength);
+            }
+
+            // --- Prepare data for table and chart ---
+            const chartLabels = [];
+            const invertData = [];
+            const bedData = [];
+
+            stations.forEach(distance => {
+                const dropAtDistance = slope * distance;
+                let invertRodReading;
+
+                if (direction === 'downhill') {
+                    invertRodReading = startRodReading + dropAtDistance;
+                } else { // 'uphill'
+                    invertRodReading = startRodReading - dropAtDistance;
+                }
+                
+                const bedRodReading = invertRodReading + 0.150;
+
+                // Populate table
+                const row = document.createElement('tr');
+                row.className = 'bg-gray-800 hover:bg-gray-600 transition-colors';
+                row.innerHTML = `
+                    <td class="py-3 px-4">${distance.toFixed(2)} m</td>
+                    <td class="py-3 px-4 font-mono text-cyan-300">${invertRodReading.toFixed(3)} m</td>
+                    <td class="py-3 px-4 font-mono text-yellow-300">${bedRodReading.toFixed(3)} m</td>
+                `;
+                resultsBody.appendChild(row);
+
+                // Populate chart data arrays
+                chartLabels.push(distance.toFixed(2));
+                invertData.push(invertRodReading.toFixed(3));
+                bedData.push(bedRodReading.toFixed(3));
+            });
+            
+            // --- Render Chart ---
+            renderGradeChart(chartLabels, invertData, bedData);
+
+            resultsDiv.classList.remove('hidden');
+        });
+        
+        function showError(message) {
+            const errorBox = document.getElementById('error-box');
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = message;
+            errorBox.classList.remove('hidden');
+        }
+
+        function renderGradeChart(labels, invertData, bedData) {
+            // If a chart instance already exists, destroy it
+            if (gradeChart) {
+                gradeChart.destroy();
+            }
+
+            const ctx = document.getElementById('gradeChart').getContext('2d');
+            gradeChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Invert Rod Reading',
+                        data: invertData,
+                        borderColor: 'rgb(34, 211, 238)', // cyan-400
+                        backgroundColor: 'rgba(34, 211, 238, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                    }, {
+                        label: 'Bed Rod Reading',
+                        data: bedData,
+                        borderColor: 'rgb(250, 204, 21)', // yellow-400
+                        backgroundColor: 'rgba(250, 204, 21, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            reverse: true, // Invert Y-axis for proper profile view
+                            title: {
+                                display: true,
+                                text: 'Rod Reading (m)',
+                                color: '#d1d5db'
+                            },
+                            ticks: { color: '#9ca3af' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Distance (m)',
+                                color: '#d1d5db'
+                            },
+                            ticks: { color: '#9ca3af' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#d1d5db'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>
