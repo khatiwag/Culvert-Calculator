@@ -3,252 +3,386 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Culvert Grade Calculator</title>
+    <title>Engineering Field Calculator</title>
+    
+    <!-- PWA Manifest and Theme Color -->
+    <link id="manifest-link" rel="manifest">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="EngCalc">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
+        body { font-family: 'Roboto', sans-serif; background-color: #f3f4f6; }
+        .font-mono, .form-input { font-family: 'Roboto Mono', monospace; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #e5e7eb; }
+        ::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 flex items-center justify-center min-h-screen p-4">
+<body class="p-4 md:p-8">
 
-    <div class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8">
-        
-        <!-- Header -->
-        <div class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-cyan-400">Culvert Grade Calculator</h1>
-            <p class="text-gray-400 mt-2">Enter your culvert's details to calculate rod heights along its length.</p>
+    <!-- Main Container -->
+    <div id="app-container">
+        <!-- Home Page -->
+        <div id="home-page" class="w-full max-w-4xl mx-auto text-center">
+            <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-8 md:p-12">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Engineering Field Calculator</h1>
+                <p class="text-gray-500 mt-2 mb-8">Select a tool to get started.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <button onclick="navigateTo('culvert-page')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 px-6 rounded-lg transition-transform transform hover:scale-105 shadow-md">
+                        <span class="text-xl">Culvert Camber Calculation</span>
+                    </button>
+                    <button onclick="navigateTo('road-page')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-6 rounded-lg transition-transform transform hover:scale-105 shadow-md">
+                        <span class="text-xl">Access Road Calculations</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <!-- Input Form -->
-        <form id="gradeForm" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div class="bg-gray-700 p-4 rounded-lg">
-                <label for="start_rod_reading" class="block text-sm font-medium text-gray-300 mb-1">Initial Invert Rod Reading (m)</label>
-                <input type="number" id="start_rod_reading" name="start_rod_reading" step="0.001" required class="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="e.g., 1.370">
+        <!-- Culvert Calculator Page -->
+        <div id="culvert-page" class="hidden">
+            <div class="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <div class="relative p-6 md:p-8 border-b border-gray-200">
+                    <button onclick="navigateTo('home-page')" class="absolute top-4 left-4 text-blue-600 hover:underline">&larr; Back to Home</button>
+                    <div class="text-center">
+                        <h1 class="text-2xl font-bold text-gray-800">Culvert Camber Calculator</h1>
+                        <p class="text-gray-500 mt-1">Calculates rod readings for a culvert with optional parabolic camber.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2">
+                    <div class="p-6 md:p-8 border-r border-gray-200"><form id="culvertGradeForm" class="space-y-6"></form></div>
+                    <div class="p-6 md:p-8 bg-gray-50">
+                        <div id="culvert-results" class="hidden space-y-8"></div>
+                        <div id="culvert-results-placeholder" class="flex items-center justify-center h-full text-center"></div>
+                    </div>
+                </div>
             </div>
-            <div class="bg-gray-700 p-4 rounded-lg">
-                <label for="culvert_length" class="block text-sm font-medium text-gray-300 mb-1">Total Culvert Length (m)</label>
-                <input type="number" id="culvert_length" name="culvert_length" step="0.1" required class="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="e.g., 20">
-            </div>
-            <div class="bg-gray-700 p-4 rounded-lg">
-                <label for="total_fall" class="block text-sm font-medium text-gray-300 mb-1">Total Elevation Change (m)</label>
-                <input type="number" id="total_fall" name="total_fall" step="0.01" required class="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="e.g., 0.10">
-            </div>
-             <div class="bg-gray-700 p-4 rounded-lg">
-                <label for="grading_direction" class="block text-sm font-medium text-gray-300 mb-1">Grading Direction</label>
-                <select id="grading_direction" name="grading_direction" class="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500">
-                    <option value="downhill">Downhill (High to Low)</option>
-                    <option value="uphill">Uphill (Low to High)</option>
-                </select>
-            </div>
-            <div class="bg-gray-700 p-4 rounded-lg md:col-span-2">
-                <label for="intervals" class="block text-sm font-medium text-gray-300 mb-1">Calculation Interval (m)</label>
-                <input type="number" id="intervals" name="intervals" step="0.1" value="5" required class="w-full bg-gray-900 border border-gray-600 rounded-md p-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500" placeholder="e.g., 5.5">
-            </div>
-            <div class="md:col-span-2 flex justify-center mt-4">
-                 <button type="submit" class="w-full md:w-1/2 bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105 shadow-lg">
-                    Calculate Grade
-                </button>
-            </div>
-        </form>
+        </div>
 
-        <!-- Results Section -->
-        <div id="results" class="hidden">
-            <h2 class="text-2xl font-bold text-center text-cyan-400 mb-4">Target Rod Heights</h2>
-            <div class="overflow-x-auto bg-gray-700 rounded-lg shadow-inner mb-8">
-                <table class="min-w-full text-center">
-                    <thead class="bg-gray-900">
-                        <tr>
-                            <th class="py-3 px-4 text-sm font-semibold text-gray-300 uppercase tracking-wider">Distance (Station)</th>
-                            <th class="py-3 px-4 text-sm font-semibold text-gray-300 uppercase tracking-wider">Invert Rod Reading</th>
-                            <th class="py-3 px-4 text-sm font-semibold text-gray-300 uppercase tracking-wider">Bed Rod Reading (+0.15m)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="results-table-body" class="divide-y divide-gray-600">
-                        <!-- Results will be injected here by JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Chart Container -->
-            <h2 class="text-2xl font-bold text-center text-cyan-400 mb-4">Grade Profile</h2>
-            <div class="bg-gray-700 rounded-lg p-4 h-96">
-                <canvas id="gradeChart"></canvas>
+        <!-- Access Road Calculator Page -->
+        <div id="road-page" class="hidden">
+             <div class="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <div class="relative p-6 md:p-8 border-b border-gray-200">
+                    <button onclick="navigateTo('home-page')" class="absolute top-4 left-4 text-blue-600 hover:underline">&larr; Back to Home</button>
+                    <div class="text-center">
+                        <h1 class="text-2xl font-bold text-gray-800">Access Road Calculator</h1>
+                        <p class="text-gray-500 mt-1">Calculates rod readings for a straight grade.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2">
+                    <div class="p-6 md:p-8 border-r border-gray-200"><form id="roadGradeForm" class="space-y-6"></form></div>
+                    <div class="p-6 md:p-8 bg-gray-50">
+                        <div id="road-results" class="hidden space-y-8"></div>
+                        <div id="road-results-placeholder" class="flex items-center justify-center h-full text-center"></div>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- Error Message Box -->
-        <div id="error-box" class="hidden mt-6 bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg relative" role="alert">
+        <!-- Error Message Box (Shared) -->
+        <div id="error-box" class="hidden mt-6 max-w-7xl mx-auto bg-red-100 border-red-400 text-red-700 px-4 py-3 rounded-lg relative" role="alert">
             <strong class="font-bold">Error:</strong>
             <span class="block sm:inline" id="error-message"></span>
         </div>
-
     </div>
 
+    <!-- Embedded Manifest JSON -->
+    <script type="application/json" id="manifest-data">
+    {
+      "name": "Engineering Field Calculator",
+      "short_name": "EngCalc",
+      "start_url": ".",
+      "display": "standalone",
+      "background_color": "#f3f4f6",
+      "theme_color": "#2563eb",
+      "description": "A calculator for culvert camber and access road grades.",
+      "icons": [
+        {
+          "src": "https://placehold.co/192x192/2563eb/ffffff?text=Eng",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any maskable"
+        },
+        {
+          "src": "https://placehold.co/512x512/2563eb/ffffff?text=EngCalc",
+          "sizes": "512x512",
+          "type": "image/png",
+          "purpose": "any maskable"
+        }
+      ]
+    }
+    </script>
+
+    <!-- Embedded Service Worker Script -->
+    <script id="sw-script">
+    const CACHE_NAME = 'eng-calculator-cache-v1';
+    // List of all files and CDN links needed for the app to work offline.
+    const urlsToCache = [
+      '/', // The main HTML file
+      'https://cdn.tailwindcss.com',
+      'https://cdn.jsdelivr.net/npm/chart.js',
+      'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap'
+    ];
+
+    // The install event is fired when the service worker is first installed.
+    self.addEventListener('install', event => {
+      // waitUntil() ensures that the service worker will not install until the code inside has successfully completed.
+      event.waitUntil(
+        caches.open(CACHE_NAME)
+          .then(cache => {
+            console.log('Opened cache');
+            // Add all the specified URLs to the cache.
+            const cachePromises = urlsToCache.map(url => {
+                // We use {mode: 'no-cors'} for third-party resources to prevent errors.
+                return cache.add(new Request(url, {mode: 'no-cors'})).catch(err => console.warn(`Failed to cache ${url}:`, err));
+            });
+            return Promise.all(cachePromises);
+          })
+      );
+    });
+
+    // The fetch event is fired for every network request the page makes.
+    self.addEventListener('fetch', event => {
+      // respondWith() hijacks the request and allows us to control the response.
+      event.respondWith(
+        // caches.match() checks if the request's URL is already in our cache.
+        caches.match(event.request)
+          .then(response => {
+            // If we have a matching response in the cache, return it.
+            if (response) {
+              return response;
+            }
+            // If the request is not in the cache, fetch it from the network.
+            return fetch(event.request);
+          }
+        )
+      );
+    });
+    </script>
+
     <script>
-        // A variable to hold the chart instance, so we can destroy it before creating a new one
-        let gradeChart = null;
-
-        document.getElementById('gradeForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent the form from submitting the traditional way
-
-            // Clear previous results and errors
-            const resultsDiv = document.getElementById('results');
-            const resultsBody = document.getElementById('results-table-body');
-            const errorBox = document.getElementById('error-box');
-            resultsBody.innerHTML = '';
-            resultsDiv.classList.add('hidden');
-            errorBox.classList.add('hidden');
-
-            // Get form values
-            const startRodReading = parseFloat(document.getElementById('start_rod_reading').value);
-            const culvertLength = parseFloat(document.getElementById('culvert_length').value);
-            const totalFall = parseFloat(document.getElementById('total_fall').value);
-            const interval = parseFloat(document.getElementById('intervals').value);
-            const direction = document.getElementById('grading_direction').value;
-
-            // --- Input Validation ---
-            if (isNaN(startRodReading) || isNaN(culvertLength) || isNaN(totalFall) || isNaN(interval)) {
-                showError("All fields must be filled with valid numbers.");
-                return;
+        // --- GLOBAL APP CONTROLLER ---
+        const App = {
+            charts: { culvert: null, camber: null, road: null },
+            config: {
+                culvert: {
+                    formId: 'culvertGradeForm', resultsId: 'culvert-results', placeholderId: 'culvert-results-placeholder',
+                    tableBodyId: 'culvert-results-table-body', gradeChartId: 'culvert-gradeChart', camberChartId: 'culvert-camberChart',
+                    title: 'Culvert', color: 'blue', hasCamber: true,
+                },
+                road: {
+                    formId: 'roadGradeForm', resultsId: 'road-results', placeholderId: 'road-results-placeholder',
+                    tableBodyId: 'road-results-table-body', gradeChartId: 'road-gradeChart',
+                    title: 'Road', color: 'green', hasCamber: false,
+                }
             }
-            if (culvertLength <= 0 || interval <= 0) {
-                showError("Culvert length and interval must be positive numbers.");
-                return;
-            }
-            if (interval > culvertLength) {
-                showError("Interval cannot be greater than the total culvert length.");
-                return;
-            }
-             if (totalFall < 0) {
-                showError("Total Elevation Change cannot be a negative number.");
-                return;
+        };
+
+        // --- NAVIGATION (Must be global for onclick) ---
+        function navigateTo(pageId) {
+            document.querySelectorAll('#app-container > div[id$="-page"]').forEach(page => page.classList.add('hidden'));
+            document.getElementById(pageId).classList.remove('hidden');
+        }
+
+        (function() {
+            // --- TEMPLATES ---
+            const placeholderHTML = `<div><svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><h3 class="mt-2 text-sm font-medium text-gray-900">No results</h3><p class="mt-1 text-sm text-gray-500">Your results will appear here after calculation.</p></div>`;
+
+            function generateFormHTML(type) {
+                const cfg = App.config[type];
+                return `
+                    <div class="space-y-6 border-b border-gray-200 pb-6">
+                        <h3 class="text-lg font-semibold text-gray-700">Starting Point</h3>
+                        <div><label for="${type}-initial_rod_reading" class="block text-sm font-medium text-gray-600 mb-1">Initial Rod Reading (m)</label><input type="number" id="${type}-initial_rod_reading" step="0.001" required class="form-input w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-${cfg.color}-500" placeholder="Rod reading on ground"></div>
+                        <div><label for="${type}-cut_fill_value" class="block text-sm font-medium text-gray-600 mb-1">Cut (+)/Fill (-) (m)</label><input type="number" id="${type}-cut_fill_value" step="0.001" required class="form-input w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-${cfg.color}-500" placeholder="e.g., 0.5 or -0.2"></div>
+                    </div>
+                    <div class="space-y-6 pt-4">
+                        <h3 class="text-lg font-semibold text-gray-700">${cfg.title} Parameters</h3>
+                        <div><label for="${type}-length" class="block text-sm font-medium text-gray-600 mb-1">Total Length (m)</label><input type="number" id="${type}-length" step="0.1" required class="form-input w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-${cfg.color}-500" placeholder="e.g., 20"></div>
+                        <div><label for="${type}-total_fall" class="block text-sm font-medium text-gray-600 mb-1">Total Elevation Change (m)</label><input type="number" id="${type}-total_fall" step="0.01" required class="form-input w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-${cfg.color}-500" placeholder="e.g., 0.10"></div>
+                        <div><label for="${type}-grading_direction" class="block text-sm font-medium text-gray-600 mb-1">Grading Direction</label><select id="${type}-grading_direction" class="w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-${cfg.color}-500"><option value="downhill">Downhill (High to Low)</option><option value="uphill">Uphill (Low to High)</option></select></div>
+                        <div><label for="${type}-intervals" class="block text-sm font-medium text-gray-600 mb-1">Calculation Interval (m)</label><input type="number" id="${type}-intervals" step="0.1" value="5" required class="form-input w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-${cfg.color}-500" placeholder="e.g., 5.5"></div>
+                        ${cfg.hasCamber ? `
+                        <div class="space-y-2 pt-2 border-t border-gray-200">
+                            <div class="flex items-center space-x-3"><input id="apply_camber" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"><label for="apply_camber" class="text-sm font-medium text-gray-700">Apply Camber</label></div>
+                            <div id="camber_height_container" class="hidden pl-7"><label for="camber_height" class="block text-sm font-medium text-gray-600 mb-1">Max Camber at Midspan (m)</label><input type="number" id="camber_height" step="0.001" value="0.05" class="form-input w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-blue-500"></div>
+                        </div>` : ''}
+                    </div>
+                    <div class="pt-4"><button type="submit" class="w-full bg-${cfg.color}-600 hover:bg-${cfg.color}-700 text-white font-bold py-3 px-6 rounded-md transition-colors shadow-sm">Calculate & Plot Grade</button></div>
+                `;
             }
 
-            // --- Calculation ---
-            const slope = totalFall / culvertLength;
-            
-            let stations = [];
-            for (let dist = 0; dist <= culvertLength; dist += interval) {
-                stations.push(dist);
+            function generateResultsHTML(type) {
+                const cfg = App.config[type];
+                return `
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-700 mb-3">Target Rod Readings</h2>
+                        <div class="overflow-x-auto rounded-md border border-gray-300 max-h-[26rem]">
+                            <table class="min-w-full text-center">
+                                <thead class="bg-gray-200 sticky top-0"><tr>
+                                    <th class="py-2 px-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Station (m)</th>
+                                    <th class="py-2 px-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Invert Rod Reading (m)</th>
+                                    <th class="py-2 px-3 text-xs font-semibold text-gray-600 uppercase tracking-wider">Bed Rod Reading (m)</th>
+                                </tr></thead>
+                                <tbody id="${cfg.tableBodyId}" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-700 mb-3">Grade Profile</h2>
+                        <div class="border border-gray-300 bg-white rounded-md p-4 h-96"><canvas id="${cfg.gradeChartId}"></canvas></div>
+                    </div>
+                    ${cfg.hasCamber ? `<div id="culvert-camber-chart-container" class="hidden"><h2 class="text-xl font-bold text-gray-700 mb-3">Camber Profile</h2><div class="border border-gray-300 bg-white rounded-md p-4 h-96"><canvas id="${cfg.camberChartId}"></canvas></div></div>` : ''}
+                `;
             }
-            if (stations[stations.length - 1] < culvertLength) {
-                stations.push(culvertLength);
-            }
 
-            // --- Prepare data for table and chart ---
-            const chartLabels = [];
-            const invertData = [];
-            const bedData = [];
+            // --- MAIN CALCULATION LOGIC ---
+            function runCalculation(event, type) {
+                event.preventDefault();
+                const cfg = App.config[type];
 
-            stations.forEach(distance => {
-                const dropAtDistance = slope * distance;
-                let invertRodReading;
+                // 1. Reset UI
+                const resultsDiv = document.getElementById(cfg.resultsId);
+                const placeholderDiv = document.getElementById(cfg.placeholderId);
+                const tableBody = document.getElementById(cfg.tableBodyId);
+                document.getElementById('error-box').classList.add('hidden');
+                tableBody.innerHTML = '';
+                resultsDiv.classList.add('hidden');
+                placeholderDiv.classList.remove('hidden');
+                if (cfg.hasCamber) document.getElementById('culvert-camber-chart-container').classList.add('hidden');
 
-                if (direction === 'downhill') {
-                    invertRodReading = startRodReading + dropAtDistance;
-                } else { // 'uphill'
-                    invertRodReading = startRodReading - dropAtDistance;
+                // 2. Get and Validate Inputs
+                const inputs = {
+                    initialRodReading: parseFloat(document.getElementById(`${type}-initial_rod_reading`).value),
+                    cutFillValue: parseFloat(document.getElementById(`${type}-cut_fill_value`).value),
+                    length: parseFloat(document.getElementById(`${type}-length`).value),
+                    totalFall: parseFloat(document.getElementById(`${type}-total_fall`).value),
+                    interval: parseFloat(document.getElementById(`${type}-intervals`).value),
+                    direction: document.getElementById(`${type}-grading_direction`).value,
+                    applyCamber: cfg.hasCamber && document.getElementById('apply_camber').checked,
+                    maxCamber: cfg.hasCamber ? parseFloat(document.getElementById('camber_height').value) : 0,
+                };
+
+                if (Object.values(inputs).some(v => typeof v === 'number' && isNaN(v))) return showError("All numeric fields must be filled with valid numbers.");
+                if (inputs.length < 0 || inputs.interval <= 0 || (inputs.applyCamber && inputs.maxCamber < 0)) return showError("Length, interval, and camber must be non-negative. Interval must be positive.");
+                if (inputs.interval > inputs.length && inputs.length > 0) return showError("Interval cannot be greater than the total length.");
+
+                // 3. Perform Calculations
+                const startRodReading = inputs.initialRodReading + inputs.cutFillValue;
+                const slope = inputs.length > 0 ? inputs.totalFall / inputs.length : 0;
+                let stations = [];
+                for (let dist = 0; dist <= inputs.length; dist += inputs.interval) stations.push(dist);
+                if (stations.length === 0 || stations[stations.length - 1] < inputs.length) stations.push(inputs.length);
+                if (inputs.length === 0) stations = [0];
+                
+                const results = [...new Set(stations)].map(x => {
+                    const drop = slope * x * (inputs.direction === 'downhill' ? 1 : -1);
+                    const straightGradeInvert = startRodReading + drop;
+                    const midspan = inputs.length / 2;
+                    const a = inputs.length > 0 ? (-4 * inputs.maxCamber) / (inputs.length ** 2) : 0;
+                    const camberAmount = inputs.applyCamber ? (a * (x - midspan) ** 2 + inputs.maxCamber) : 0;
+                    const finalInvert = straightGradeInvert - camberAmount;
+                    return { station: x, straightInvert: straightGradeInvert, finalInvert, bed: finalInvert + 0.150, camberAmount };
+                });
+
+                // 4. Display Results
+                tableBody.innerHTML = results.map(r => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-2 px-3 font-mono text-sm">${r.station.toFixed(2)}</td>
+                        <td class="py-2 px-3 font-mono text-sm text-${cfg.color}-600 font-bold">${r.finalInvert.toFixed(3)}</td>
+                        <td class="py-2 px-3 font-mono text-sm text-green-600">${r.bed.toFixed(3)}</td>
+                    </tr>`).join('');
+
+                // 5. Render Charts
+                const chartLabels = results.map(r => r.station.toFixed(2));
+                const finalInvertData = results.map(r => r.finalInvert.toFixed(3));
+                const bedData = results.map(r => r.bed.toFixed(3));
+                App.charts[type] = renderGradeChart(App.charts[type], cfg.gradeChartId, chartLabels, finalInvertData, bedData);
+
+                if (inputs.applyCamber) {
+                    document.getElementById('culvert-camber-chart-container').classList.remove('hidden');
+                    const straightData = results.map(r => r.straightInvert.toFixed(3));
+                    const camberData = results.map(r => r.camberAmount.toFixed(3));
+                    App.charts.camber = renderCamberChart(App.charts.camber, 'culvert-camberChart', chartLabels, straightData, finalInvertData, camberData);
                 }
                 
-                const bedRodReading = invertRodReading + 0.150;
-
-                // Populate table
-                const row = document.createElement('tr');
-                row.className = 'bg-gray-800 hover:bg-gray-600 transition-colors';
-                row.innerHTML = `
-                    <td class="py-3 px-4">${distance.toFixed(2)} m</td>
-                    <td class="py-3 px-4 font-mono text-cyan-300">${invertRodReading.toFixed(3)} m</td>
-                    <td class="py-3 px-4 font-mono text-yellow-300">${bedRodReading.toFixed(3)} m</td>
-                `;
-                resultsBody.appendChild(row);
-
-                // Populate chart data arrays
-                chartLabels.push(distance.toFixed(2));
-                invertData.push(invertRodReading.toFixed(3));
-                bedData.push(bedRodReading.toFixed(3));
-            });
+                placeholderDiv.classList.add('hidden');
+                resultsDiv.classList.remove('hidden');
+            }
             
-            // --- Render Chart ---
-            renderGradeChart(chartLabels, invertData, bedData);
-
-            resultsDiv.classList.remove('hidden');
-        });
-        
-        function showError(message) {
-            const errorBox = document.getElementById('error-box');
-            const errorMessage = document.getElementById('error-message');
-            errorMessage.textContent = message;
-            errorBox.classList.remove('hidden');
-        }
-
-        function renderGradeChart(labels, invertData, bedData) {
-            // If a chart instance already exists, destroy it
-            if (gradeChart) {
-                gradeChart.destroy();
+            // --- HELPER FUNCTIONS ---
+            function showError(message) {
+                const errorBox = document.getElementById('error-box');
+                document.getElementById('error-message').textContent = message;
+                errorBox.classList.remove('hidden');
             }
 
-            const ctx = document.getElementById('gradeChart').getContext('2d');
-            gradeChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Invert Rod Reading',
-                        data: invertData,
-                        borderColor: 'rgb(34, 211, 238)', // cyan-400
-                        backgroundColor: 'rgba(34, 211, 238, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.1,
-                        fill: true,
-                    }, {
-                        label: 'Bed Rod Reading',
-                        data: bedData,
-                        borderColor: 'rgb(250, 204, 21)', // yellow-400
-                        backgroundColor: 'rgba(250, 204, 21, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.1,
-                        fill: true,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            reverse: true, // Invert Y-axis for proper profile view
-                            title: {
-                                display: true,
-                                text: 'Rod Reading (m)',
-                                color: '#d1d5db'
-                            },
-                            ticks: { color: '#9ca3af' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Distance (m)',
-                                color: '#d1d5db'
-                            },
-                            ticks: { color: '#9ca3af' },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: '#d1d5db'
-                            }
-                        }
-                    }
-                }
-            });
-        }
+            function renderGradeChart(chartInstance, canvasId, labels, invertData, bedData) {
+                if (chartInstance) chartInstance.destroy();
+                const textColor = '#4b5563', gridColor = '#e5e7eb';
+                const datasets = [
+                    { label: 'Invert Rod Reading', data: invertData, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', borderWidth: 2, pointBackgroundColor: '#2563eb', pointRadius: 4, pointHoverRadius: 6, tension: 0.1 },
+                    { label: 'Bed Rod Reading', data: bedData, borderColor: '#16a34a', backgroundColor: 'rgba(22, 163, 74, 0.1)', borderWidth: 2, pointBackgroundColor: '#16a34a', pointRadius: 4, pointHoverRadius: 6, tension: 0.1 }
+                ];
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                return new Chart(ctx, { type: 'line', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { reverse: true, title: { display: true, text: 'Rod Reading (m)', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } }, x: { title: { display: true, text: 'Distance (m)', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } } }, plugins: { legend: { position: 'top', labels: { color: textColor } } } } });
+            }
 
+            function renderCamberChart(chartInstance, canvasId, labels, straightData, camberedData, camberAmountData) {
+                if (chartInstance) chartInstance.destroy();
+                const textColor = '#4b5563', gridColor = '#e5e7eb';
+                const datasets = [
+                    { label: 'Straight Grade Invert', data: straightData, borderColor: '#6b7280', backgroundColor: 'rgba(107, 114, 128, 0.1)', borderWidth: 2, borderDash: [5, 5], pointRadius: 4, tension: 0.1, yAxisID: 'y' },
+                    { label: 'Final Cambered Invert', data: camberedData, borderColor: '#db2777', backgroundColor: 'rgba(219, 39, 119, 0.1)', borderWidth: 3, pointRadius: 5, tension: 0.4, yAxisID: 'y' },
+                    { label: 'Parabolic Camber Amount', data: camberAmountData, borderColor: '#f97316', backgroundColor: 'rgba(249, 115, 22, 0.1)', borderWidth: 2, pointRadius: 4, tension: 0.4, yAxisID: 'y1', fill: true }
+                ];
+                const ctx = document.getElementById(canvasId).getContext('2d');
+                return new Chart(ctx, { type: 'line', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { reverse: true, type: 'linear', position: 'left', title: { display: true, text: 'Rod Reading (m)', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } }, y1: { type: 'linear', position: 'right', title: { display: true, text: 'Camber Amount (m)', color: textColor }, ticks: { color: textColor }, grid: { drawOnChartArea: false } }, x: { title: { display: true, text: 'Distance from Inlet (m)', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } } }, plugins: { legend: { position: 'top', labels: { color: textColor } } } } });
+            }
+
+            // --- APP INITIALIZATION ---
+            function initializeApp() {
+                for (const type in App.config) {
+                    const cfg = App.config[type];
+                    document.getElementById(cfg.formId).innerHTML = generateFormHTML(type);
+                    document.getElementById(cfg.resultsId).innerHTML = generateResultsHTML(type);
+                    document.getElementById(cfg.placeholderId).innerHTML = placeholderHTML;
+                    document.getElementById(cfg.formId).addEventListener('submit', (e) => runCalculation(e, type));
+                }
+                document.getElementById('apply_camber').addEventListener('change', (e) => {
+                    document.getElementById('camber_height_container').classList.toggle('hidden', !e.target.checked);
+                });
+
+                // Create and link the manifest from the embedded script tag
+                const manifestJson = document.getElementById('manifest-data').textContent;
+                const manifestBlob = new Blob([manifestJson], { type: 'application/json' });
+                const manifestUrl = URL.createObjectURL(manifestBlob);
+                document.getElementById('manifest-link').href = manifestUrl;
+
+                // Register the service worker from the embedded script tag
+                if ('serviceWorker' in navigator) {
+                    const swScript = document.getElementById('sw-script').textContent;
+                    const swBlob = new Blob([swScript], { type: 'application/javascript' });
+                    const swUrl = URL.createObjectURL(swBlob);
+
+                    navigator.serviceWorker.register(swUrl)
+                        .then(registration => {
+                            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                        })
+                        .catch(error => {
+                            console.log('ServiceWorker registration failed: ', error);
+                        });
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        })();
     </script>
 </body>
 </html>
+
