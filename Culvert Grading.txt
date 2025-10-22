@@ -265,7 +265,12 @@
                     interval: parseFloat(document.getElementById(`${type}-intervals`).value),
                     direction: document.getElementById(`${type}-grading_direction`).value,
                     applyCamber: cfg.hasCamber && document.getElementById('apply_camber').checked,
-                    maxCamber: cfg.hasCamber ? parseFloat(document.getElementById('camber_height').value) : 0,
+                    maxCamber: cfg.hasCamber 
+    ? (document.getElementById('apply_camber').checked 
+        ? 0.05 * parseFloat(document.getElementById(`${type}-length`).value) 
+        : 0)
+    : 0,
+
                 };
 
                 if (Object.values(inputs).some(v => typeof v === 'number' && isNaN(v))) return showError("All numeric fields must be filled with valid numbers.");
@@ -385,3 +390,4 @@
     </script>
 </body>
 </html>
+
