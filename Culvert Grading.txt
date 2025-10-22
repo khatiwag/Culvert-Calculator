@@ -267,7 +267,7 @@
                     applyCamber: cfg.hasCamber && document.getElementById('apply_camber').checked,
                     maxCamber: cfg.hasCamber 
     ? (document.getElementById('apply_camber').checked 
-        ? 0.05 * parseFloat(document.getElementById(`${type}-length`).value) 
+        ? 0.005 * parseFloat(document.getElementById(`${type}-length`).value) 
         : 0)
     : 0,
 
@@ -390,4 +390,5 @@
     </script>
 </body>
 </html>
+
 
