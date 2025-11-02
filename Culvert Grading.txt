@@ -48,7 +48,7 @@
         <div id="culvert-page" class="hidden">
             <div class="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
                 <div class="relative p-6 md:p-8 border-b border-gray-200">
-                    <button onclick="navigateTo('home-page')" class="absolute top-4 left-4 text-blue-600 hover:underline">&larr; Back to Home</button>
+                    <button onclick="navigateTo('home-page')" class="back-to-home-btn absolute top-4 left-4 text-blue-600 hover:underline">&larr; Back to Home</button>
                     <div class="text-center">
                         <h1 class="text-2xl font-bold text-gray-800">Culvert Camber Calculator</h1>
                         <p class="text-gray-500 mt-1">Calculates rod readings for a culvert with optional parabolic camber.</p>
@@ -68,7 +68,7 @@
         <div id="road-page" class="hidden">
              <div class="w-full max-w-7xl mx-auto bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
                 <div class="relative p-6 md:p-8 border-b border-gray-200">
-                    <button onclick="navigateTo('home-page')" class="absolute top-4 left-4 text-blue-600 hover:underline">&larr; Back to Home</button>
+                    <button onclick="navigateTo('home-page')" class="back-to-home-btn absolute top-4 left-4 text-blue-600 hover:underline">&larr; Back to Home</button>
                     <div class="text-center">
                         <h1 class="text-2xl font-bold text-gray-800">Access Road Calculator</h1>
                         <p class="text-gray-500 mt-1">Calculates rod readings for a straight grade.</p>
@@ -210,7 +210,20 @@
                         ${cfg.hasCamber ? `
                         <div class="space-y-2 pt-2 border-t border-gray-200">
                             <div class="flex items-center space-x-3"><input id="apply_camber" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"><label for="apply_camber" class="text-sm font-medium text-gray-700">Apply Camber</label></div>
-                            <div id="camber_height_container" class="hidden pl-7"><label for="camber_height" class="block text-sm font-medium text-gray-600 mb-1">Max Camber at Midspan (m)</label><input type="number" id="camber_height" step="0.001" value="0.05" class="form-input w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-blue-500"></div>
+                            <div id="camber_height_container" class="hidden pl-7 space-y-4">
+                                <!-- NEW INPUT FOR PERCENTAGE -->
+                                <div>
+                                    <label for="camber_percentage" class="block text-sm font-medium text-gray-600 mb-1">Camber Percentage (%)</label>
+                                    <input type="number" id="camber_percentage" step="0.01" value="0.5" 
+                                           class="form-input w-full bg-gray-50 border border-gray-300 rounded-md p-2 text-gray-900 focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <!-- MODIFIED INPUT FOR CAMBER HEIGHT -->
+                                <div>
+                                    <label for="camber_height" class="block text-sm font-medium text-gray-600 mb-1">Max Camber at Midspan (m)</label>
+                                    <input type="number" id="camber_height" step="0.001" placeholder="Auto-calculated" readonly 
+                                           class="form-input w-full bg-gray-100 border border-gray-300 rounded-md p-2 text-gray-900 cursor-not-allowed focus:ring-0">
+                                </div>
+                            </div>
                         </div>` : ''}
                     </div>
                     <div class="pt-4"><button type="submit" class="w-full bg-${cfg.color}-600 hover:bg-${cfg.color}-700 text-white font-bold py-3 px-6 rounded-md transition-colors shadow-sm">Calculate & Plot Grade</button></div>
@@ -265,12 +278,7 @@
                     interval: parseFloat(document.getElementById(`${type}-intervals`).value),
                     direction: document.getElementById(`${type}-grading_direction`).value,
                     applyCamber: cfg.hasCamber && document.getElementById('apply_camber').checked,
-                    maxCamber: cfg.hasCamber 
-    ? (document.getElementById('apply_camber').checked 
-        ? 0.005 * parseFloat(document.getElementById(`${type}-length`).value) 
-        : 0)
-    : 0,
-
+                    maxCamber: cfg.hasCamber ? parseFloat(document.getElementById('camber_height').value) : 0, // This will now get the auto-calculated value
                 };
 
                 if (Object.values(inputs).some(v => typeof v === 'number' && isNaN(v))) return showError("All numeric fields must be filled with valid numbers.");
@@ -359,9 +367,43 @@
                     document.getElementById(cfg.placeholderId).innerHTML = placeholderHTML;
                     document.getElementById(cfg.formId).addEventListener('submit', (e) => runCalculation(e, type));
                 }
+
+                // --- Camber Auto-Calculation ---
+                const culvertLengthInput = document.getElementById('culvert-length');
+                const camberHeightInput = document.getElementById('camber_height');
+                const camberPercentageInput = document.getElementById('camber_percentage'); // NEW
+
+                function updateCamberHeight() { // NEW HELPER
+                    const length = parseFloat(culvertLengthInput.value);
+                    const percentage = parseFloat(camberPercentageInput.value);
+
+                    if (!isNaN(length) && length >= 0 && !isNaN(percentage) && percentage >= 0) {
+                        const camberHeight = length * (percentage / 100); // Calculate from percentage
+                        camberHeightInput.value = camberHeight.toFixed(3);
+                    } else {
+                        camberHeightInput.value = ''; // Clear if inputs are invalid
+                    }
+                }
+
+                if (culvertLengthInput && camberHeightInput && camberPercentageInput) { // UPDATED
+                    // Update camber height when length changes
+                    culvertLengthInput.addEventListener('input', updateCamberHeight); // UPDATED
+                    
+                    // Update camber height when percentage changes
+                    camberPercentageInput.addEventListener('input', updateCamberHeight); // NEW
+                }
+                // --- End Camber Auto-Calculation ---
+
                 document.getElementById('apply_camber').addEventListener('change', (e) => {
                     document.getElementById('camber_height_container').classList.toggle('hidden', !e.target.checked);
                 });
+
+                // Hide "Back to Home" button if running as a standalone PWA
+                if (window.matchMedia('(display-mode: standalone)').matches) {
+                    document.querySelectorAll('.back-to-home-btn').forEach(btn => {
+                        btn.classList.add('hidden');
+                    });
+                }
 
                 // Create and link the manifest from the embedded script tag
                 const manifestJson = document.getElementById('manifest-data').textContent;
